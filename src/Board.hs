@@ -61,13 +61,3 @@ createBoard b m ks = P.foldl (\a k -> let
     newRow = (element x .~ p) row
         in (element y .~ newRow) a
     ) b ks
-
-
--- place :: [String] -> (Int, Int)
--- place a k = let
---     y = snd k
---     x = fst k
---     row = a !! y
---     p = l
---     newRow = (element x .~ p) row
---         in (element y .~ newRow) a
