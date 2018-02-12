@@ -1,20 +1,36 @@
 module PieceBehavior where
 
-validPawnUp og nx = let
+import Data.Maybe (fromJust)
+import Data.Map.Lazy
+
+validWhitePawn :: (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validWhitePawn og nx ps = let 
     x = fst nx - fst og
     y = snd nx - snd og
-    in (inBounds nx) && x == 0 && (y == 1 || y == 2)
-    
-validPawnDown og nx = let
-    x = fst og - fst nx
-    y = snd og - snd nx
-    in (inBounds nx) && x == 0 && (y == 1 || y == 2)
+    in inBounds nx && ((
+        x == 0 && (y == 1 || (y == 2 && snd og == 1))
+    ) || (y == 1 && (
+        x == 1 || x == -1
+    ) && oppositeColorPieceExists ps nx isBlack))
+
+oppositeColorPieceExists :: Map (Int, Int) Char -> (Int, Int) -> (Char -> Bool) -> Bool
+oppositeColorPieceExists ps nx f =
+    ps !? nx /= Nothing && (f . fromJust $ ps !? nx)
+
+validBlackPawn og nx ps = let 
+    x = fst nx - fst og
+    y = snd nx - snd og
+    in inBounds nx && ((
+        x == 0 && (y == -1 || (y == -2 && snd og == 6))
+    ) || (y == -1 && (
+        x == 1 || x == -1
+    ) && oppositeColorPieceExists ps nx isWhite))
 
 validKnight og nx = let
     x = fromIntegral . abs $ (-) (fst og) (fst nx)
     y = fromIntegral . abs $ (-) (snd og) (snd og)
     d = abs $ (/) x y
-    in (inBounds nx)
+    in inBounds nx
     && (d == 0.5 || d == 2)
     && (x == 2 || x == 1)
     && (y == 2 || y == 1)
@@ -22,13 +38,13 @@ validKnight og nx = let
 validBishop og nx = let
     x = abs $ (-) (fst og) (fst nx)
     y = abs $ (-) (snd og) (snd og)
-    in (inBounds nx)
+    in inBounds nx
     && (x == y)
 
 validRook og nx = let
     x = abs $ (-) (fst og) (fst nx)
     y = abs $ (-) (snd og) (snd og)
-    in (inBounds nx)
+    in inBounds nx
     && (x > 0 && y == 0)
     && (y > 0 && x == 0)
     
@@ -43,12 +59,28 @@ validKing og nx = let
     y = abs $ (-) (snd og) (snd og)
     in x < 2 && y < 2 && (x /= 0 || y /= 0)
 
-validateMove :: Char -> (Int, Int) -> (Int, Int) -> Bool
-validateMove c og nx 
+validateMove :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validateMove c og nx ps
     | c == '♜' || c == '♖' = validRook og nx
     | c == '♞' || c == '♘' = validKnight og nx
     | c == '♝' || c == '♗' = validBishop og nx
     | c == '♛' || c == '♕' = True
     | c == '♚' || c == '♔' = validKing og nx
-    | c == '♟' = validPawnUp og nx
-    | c == '♙' = validPawnDown og nx
+    | c == '♟' = validWhitePawn og nx ps
+    | c == '♙' = validBlackPawn og nx ps
+
+isWhite x = elem x whitePieces
+isBlack x = elem x blackPieces
+whitePieces = ['♜', '♞', '♝', '♛', '♚', '♟']
+blackPieces = ['♖', '♘', '♗', '♕', '♔', '♙']
+
+
+piecesBetween :: (Int, Int) -> Int -> Int -> Map (Int, Int) Char -> Bool
+piecesBetween og x y ps = piecesBetween' og (oneLess x (fst og)) (oneLess y (snd og)) ps
+
+piecesBetween' og x y ps
+    | x == fst og && y == snd og = False
+    | otherwise = if ps !? (x, y) /= Nothing then True else piecesBetween' og (oneLess x (fst og)) (oneLess y (snd og)) ps 
+
+oneLess :: Int -> Int -> Int
+oneLess x y = if x == y then x else if x < y then y - 1 else y + 1

@@ -23,7 +23,7 @@ parseCommand c ps = if length c /= 5 then Right "Invalid move"
             else 
                 let moves = ((digitToInt $ (!!) c 0, digitToInt $ (!!) c 1), (digitToInt $ (!!) c 3, digitToInt $ (!!) c 4))
                 in
-                    if validateMove (ps ! (fst moves)) (fst moves) (snd moves) == False 
+                    if validateMove (ps ! fst moves) (fst moves) (snd moves) ps == False 
                         then Right "Nope"
                     else Left moves
 
