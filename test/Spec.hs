@@ -32,16 +32,18 @@ main = hspec $ do
         it "should not be able to go forward 2 paces otherwise" $ do
             validBlackPawn (0, 5) (0, 3) initPieces `shouldBe` False
 
+    describe "PieceBehavior.oneLess" $ do 
+        it "should return one step closer to x if y is greater" $ do
+            oneLess 0 4 `shouldBe` 1
+        it "should return one step closer to x if x is greater" $ do
+            oneLess 4 1 `shouldBe` 3
+        it "should do nothing if x and y are the same" $ do
+            oneLess 1 1 `shouldBe` 1
+
     describe "PieceBehavior.piecesBetween" $ do 
         it "should return True if there are pieces in between" $ do
             let ps = fromList [((1, 1), 'a')]
                 in piecesBetween (0, 0) 2 2 ps `shouldBe` True
         it "should return False if there are not pieces in between" $ do 
-            piecesBetween (3,3) 2 2 initPieces `shouldBe` True
-
-    describe "PieceBehavior.oneLess" $ do 
-        it "should return one step closer to x if y is greater" $ do
-            oneLess 0 4 `shouldBe` 3
-        it "should return one step closer to x if x is greater" $ do
-            oneLess 4 0 `shouldBe` 1 
+            piecesBetween (3,3) 1 1 initPieces `shouldBe` False
  

@@ -6,17 +6,19 @@ import Data.Char (digitToInt)
 import Data.Either (isRight, fromLeft, fromRight)
 import PieceBehavior (validateMove)
 
-printBoard pieces = putStrLn $ Prelude.foldl (\x y -> x ++ "\n" ++ y)  "" (createBoard board pieces (keys pieces))
+printBoard pieces = Prelude.foldl (\x y -> x ++ "\n" ++ y)  "" (createBoard board pieces (keys pieces))
 
 playGame pieces = do
-    command <- getLine
+    putStrLn "Enter move"
     do
-        let parsed = parseCommand command pieces
-            newPieces = movePiece parsed pieces
-        if isRight parsed then putStrLn $ fromRight "" parsed
-        else printBoard newPieces
+        command <- getLine
         do
-            playGame newPieces
+            let parsed = parseCommand command pieces
+                newPieces = movePiece parsed pieces
+            putStrLn (if isRight parsed then fromRight "" parsed
+            else printBoard newPieces)
+            do
+                playGame newPieces
 
 parseCommand :: String -> Map (Int, Int) Char -> Either ((Int, Int), (Int, Int)) String
 parseCommand c ps = if length c /= 5 then Right "Invalid move"
@@ -41,6 +43,6 @@ movePiece c ps =
         in insert (x2, y2) p . delete (x2, y2) $ delete (x1, y1) ps
         
 startGame = do
-    printBoard initPieces
+    putStrLn $ printBoard initPieces
     do
         playGame initPieces

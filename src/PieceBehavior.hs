@@ -60,7 +60,19 @@ validKing og nx = let
     in x < 2 && y < 2 && (x /= 0 || y /= 0)
 
 validateMove :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
-validateMove c og nx ps
+validateMove c og nx ps = 
+    validateTakeOver c nx ps
+    && validatePieceBehavior c og nx ps
+    && (c == '♘' || c == '♞' || False == piecesBetween og (fst nx) (snd nx) ps)
+
+
+validateTakeOver :: Char -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validateTakeOver c nx ps =
+    if ps !? nx == Nothing then True
+    else (isWhite c) /= (isWhite . fromJust $ ps !? nx)
+
+validatePieceBehavior :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validatePieceBehavior c og nx ps
     | c == '♜' || c == '♖' = validRook og nx
     | c == '♞' || c == '♘' = validKnight og nx
     | c == '♝' || c == '♗' = validBishop og nx
@@ -75,12 +87,15 @@ whitePieces = ['♜', '♞', '♝', '♛', '♚', '♟']
 blackPieces = ['♖', '♘', '♗', '♕', '♔', '♙']
 
 
-piecesBetween :: (Int, Int) -> Int -> Int -> Map (Int, Int) Char -> Bool
 piecesBetween og x y ps = piecesBetween' og (oneLess x (fst og)) (oneLess y (snd og)) ps
 
 piecesBetween' og x y ps
     | x == fst og && y == snd og = False
-    | otherwise = if ps !? (x, y) /= Nothing then True else piecesBetween' og (oneLess x (fst og)) (oneLess y (snd og)) ps 
+    | otherwise = if ps !? (x, y) /= Nothing then True
+        else piecesBetween' og (oneLess x (fst og)) (oneLess y (snd og)) ps 
 
 oneLess :: Int -> Int -> Int
-oneLess x y = if x == y then x else if x < y then y - 1 else y + 1
+oneLess x y 
+    | x == y = x
+    | x < y = x + 1
+    | otherwise = x - 1
