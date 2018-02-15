@@ -21,12 +21,12 @@ playGame pieces = do
                 playGame newPieces
 
 parseCommand :: String -> Map (Int, Int) Char -> Either ((Int, Int), (Int, Int)) String
-parseCommand c ps = if length c /= 5 then Right "Invalid move"
+parseCommand c ps = if length c /= 5 then Right "Invalid command"
             else 
                 let moves = ((digitToInt $ (!!) c 0, digitToInt $ (!!) c 1), (digitToInt $ (!!) c 3, digitToInt $ (!!) c 4))
                 in
                     if validateMove (ps ! fst moves) (fst moves) (snd moves) ps == False 
-                        then Right "Nope"
+                        then Right "Invalid move"
                     else Left moves
 
 movePiece :: Either ((Int, Int), (Int, Int)) String -> Map (Int, Int) Char -> Map (Int, Int) Char

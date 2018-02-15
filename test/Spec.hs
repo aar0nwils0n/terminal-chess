@@ -46,4 +46,9 @@ main = hspec $ do
                 in piecesBetween (0, 0) 2 2 ps `shouldBe` True
         it "should return False if there are not pieces in between" $ do 
             piecesBetween (3,3) 1 1 initPieces `shouldBe` False
+
+    describe "PieceBehavior.validRook" $ do 
+        it "should be able to move forward a space" $ do
+            let ps = fromList [((0, 0), '♜')]
+                in validRook (0, 0) (0, 1) `shouldBe` True
  

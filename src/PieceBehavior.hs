@@ -27,26 +27,24 @@ validBlackPawn og nx ps = let
     ) && oppositeColorPieceExists ps nx isWhite))
 
 validKnight og nx = let
-    x = fromIntegral . abs $ (-) (fst og) (fst nx)
-    y = fromIntegral . abs $ (-) (snd og) (snd og)
-    d = abs $ (/) x y
+    x = abs $ (-) (fst og) (fst nx)
+    y = abs $ (-) (snd og) (snd nx)
     in inBounds nx
-    && (d == 0.5 || d == 2)
-    && (x == 2 || x == 1)
-    && (y == 2 || y == 1)
+    && ((x == 2 && y == 1) || (y == 2 && x == 1))
 
 validBishop og nx = let
     x = abs $ (-) (fst og) (fst nx)
-    y = abs $ (-) (snd og) (snd og)
+    y = abs $ (-) (snd og) (snd nx)
     in inBounds nx
     && (x == y)
 
 validRook og nx = let
     x = abs $ (-) (fst og) (fst nx)
-    y = abs $ (-) (snd og) (snd og)
+    y = abs $ (-) (snd og) (snd nx)
     in inBounds nx
-    && (x > 0 && y == 0)
-    && (y > 0 && x == 0)
+    && (
+        (x > 0 && y == 0) || (y > 0 && x == 0)
+    )
     
 inBounds nx = let
     x = fst nx
@@ -56,7 +54,7 @@ inBounds nx = let
 
 validKing og nx = let
     x = abs $ (-) (fst og) (fst nx)
-    y = abs $ (-) (snd og) (snd og)
+    y = abs $ (-) (snd og) (snd nx)
     in x < 2 && y < 2 && (x /= 0 || y /= 0)
 
 validateMove :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
