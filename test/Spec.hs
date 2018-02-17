@@ -11,10 +11,10 @@ main = hspec $ do
 
     describe "PieceBehavior.validBlackPawn" $ do
         it "should be able to take over a black peice diagonally" $ do
-            let pieces = fromList [((0, 0), '♟'), ((1, 1), '♙')]
+            let pieces = fromList [((0, 0), '♙'), ((1, 1), '♟')]
                 in validBlackPawn (0, 0) (1, 1) pieces `shouldBe` True
         it "should not be able to go diagonally otherwise" $ do
-            let pieces = fromList [((0, 0), '♟'), ((0, 2), '♙')]
+            let pieces = fromList [((0, 0), '♙'), ((0, 2), '♟')]
                 in validBlackPawn (0, 0) (1, 1) pieces `shouldBe` False
         it "should be able to go forward 2 paces from the get go" $ do
             validBlackPawn (0, 1) (0, 3) initPieces `shouldBe` True
@@ -24,9 +24,9 @@ main = hspec $ do
     describe "PieceBehavior.validWhitePawn" $ do 
         it "should be able to take over a black peice diagonally" $ do
             let pieces = fromList [((0, 0), '♙'), ((1, 1), '♟')]
-                in validWhitePawn (1, 1) (0, 0) pieces `shouldBe` False
+                in validWhitePawn (1, 1) (0, 0) pieces `shouldBe` True
         it "should not be able to go diagonally otherwise" $ do
-            let pieces = fromList [((0, 0), '♙')]
+            let pieces = fromList [((0, 0), '♟')]
                 in validWhitePawn (1, 1) (0, 0) pieces `shouldBe` False
         it "should be able to go forward 2 paces from the get go" $ do
             validWhitePawn (0, 6) (0, 4) initPieces `shouldBe` True

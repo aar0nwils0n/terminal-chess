@@ -11,7 +11,7 @@ validBlackPawn og nx ps = let
         x == 0 && (y == 1 || (y == 2 && snd og == 1))
     ) || (y == 1 && (
         x == 1 || x == -1
-    ) && oppositeColorPieceExists ps nx isBlack))
+    ) && oppositeColorPieceExists ps nx isWhite))
 
 oppositeColorPieceExists :: Map (Int, Int) Char -> (Int, Int) -> (Char -> Bool) -> Bool
 oppositeColorPieceExists ps nx f =
@@ -24,7 +24,7 @@ validWhitePawn og nx ps = let
         x == 0 && (y == -1 || (y == -2 && snd og == 6))
     ) || (y == -1 && (
         x == 1 || x == -1
-    ) && oppositeColorPieceExists ps nx isWhite))
+    ) && oppositeColorPieceExists ps nx isBlack))
 
 validKnight og nx = let
     x = abs $ (-) (fst og) (fst nx)
@@ -74,7 +74,7 @@ validatePieceBehavior c og nx ps
     | c == '♜' || c == '♖' = validRook og nx
     | c == '♞' || c == '♘' = validKnight og nx
     | c == '♝' || c == '♗' = validBishop og nx
-    | c == '♛' || c == '♕' = True
+    | c == '♛' || c == '♕' = (validRook og nx || validBishop og nx)
     | c == '♚' || c == '♔' = validKing og nx
     | c == '♟' = validWhitePawn og nx ps
     | c == '♙' = validBlackPawn og nx ps
