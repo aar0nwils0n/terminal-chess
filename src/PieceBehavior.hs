@@ -3,8 +3,8 @@ module PieceBehavior where
 import Data.Maybe (fromJust)
 import Data.Map.Lazy
 
-validWhitePawn :: (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
-validWhitePawn og nx ps = let 
+validBlackPawn :: (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validBlackPawn og nx ps = let 
     x = fst nx - fst og
     y = snd nx - snd og
     in inBounds nx && ((
@@ -17,7 +17,7 @@ oppositeColorPieceExists :: Map (Int, Int) Char -> (Int, Int) -> (Char -> Bool) 
 oppositeColorPieceExists ps nx f =
     ps !? nx /= Nothing && (f . fromJust $ ps !? nx)
 
-validBlackPawn og nx ps = let 
+validWhitePawn og nx ps = let 
     x = fst nx - fst og
     y = snd nx - snd og
     in inBounds nx && ((

@@ -2,11 +2,14 @@ module GamePlay where
 
 import Board
 import Data.Map.Lazy
-import Data.Char (digitToInt)
+import Data.Char (digitToInt, ord)
 import Data.Either (isRight, fromLeft, fromRight)
 import PieceBehavior (validateMove, isWhite, isBlack)
+import Prelude as P 
 
-printBoard pieces = Prelude.foldl (\x y -> x ++ "\n" ++ y)  "" (createBoard board pieces (keys pieces))
+printBoard pieces = 
+    let zipped = zip [7,6..0] (createBoard board pieces (keys pieces))
+    in " " ++ ['a'..'h'] ++ P.foldl (\x y -> x ++ "\n" ++ (P.show $ (fst y) + 1) ++ (snd y))  "" zipped
 
 playGame pieces color = do
     putStrLn $ "Move " ++ color ++ " piece"
@@ -23,11 +26,22 @@ playGame pieces color = do
                         else if color == "white" then "black" else "white"
                     )
 
+letterToNumber c = ord c - 97
+
+convertCoord i
+    | i < 1 || i > 8 = -1
+    | otherwise = [7,6,5,4,3,2,1,0] !! (i - 1)
+
 parseCommand :: String -> Map (Int, Int) Char -> String -> Either ((Int, Int), (Int, Int)) String
 parseCommand c ps color = if length c /= 5 then Right "Invalid command"
             else 
-                let og = (digitToInt $ (!!) c 0, digitToInt $ (!!) c 1)
-                    nx = (digitToInt $ (!!) c 3, digitToInt $ (!!) c 4)
+                let
+                    x1 = letterToNumber $ (!!) c 0
+                    y1 = convertCoord $ digitToInt $ (!!) c 1
+                    x2 = letterToNumber $ (!!) c 3
+                    y2 = convertCoord $ digitToInt $ (!!) c 4
+                    og = (x1, y1)
+                    nx = (x2, y2)
                     moves = (og, nx)
                 in
                     if ps !? og == Nothing then Right "Piece does not exist"
