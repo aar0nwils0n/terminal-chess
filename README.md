@@ -1,13 +1,13 @@
 # Chess on the terminal
 Two player chess played in the terminal<br />
 
-##Play it
+## Play it
 ```
 stack build && stack exec chess-exe
 
 ```
 
-##To Dos
+## To Dos
 *Handle checkmates
 *Declare a winner and exit program
 *Pawn promotion
