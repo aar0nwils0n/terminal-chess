@@ -8,9 +8,9 @@ stack build && stack exec chess-exe
 ```
 
 ## To Dos
-*Handle checkmates
-*Declare a winner and exit program
-*Pawn promotion
-*Castling
-*En Passant
-*Other obscure rules
+* Handle checkmates
+* Declare a winner and exit program
+* Pawn promotion
+* Castling
+* En Passant
+* Other obscure rules
