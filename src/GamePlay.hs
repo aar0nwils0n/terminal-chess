@@ -4,31 +4,44 @@ import Board
 import Data.Map.Lazy
 import Data.Char (digitToInt)
 import Data.Either (isRight, fromLeft, fromRight)
-import PieceBehavior (validateMove)
+import PieceBehavior (validateMove, isWhite, isBlack)
 
 printBoard pieces = Prelude.foldl (\x y -> x ++ "\n" ++ y)  "" (createBoard board pieces (keys pieces))
 
-playGame pieces = do
-    putStrLn "Enter move"
+playGame pieces color = do
+    putStrLn $ "Move " ++ color ++ " piece"
     do
         command <- getLine
         do
-            let parsed = parseCommand command pieces
+            let parsed = parseCommand command pieces color
                 newPieces = movePiece parsed pieces
             putStrLn (if isRight parsed then fromRight "" parsed
             else printBoard newPieces)
             do
-                playGame newPieces
+                playGame newPieces (
+                        if isRight parsed then color
+                        else if color == "white" then "black" else "white"
+                    )
 
-parseCommand :: String -> Map (Int, Int) Char -> Either ((Int, Int), (Int, Int)) String
-parseCommand c ps = if length c /= 5 then Right "Invalid command"
+parseCommand :: String -> Map (Int, Int) Char -> String -> Either ((Int, Int), (Int, Int)) String
+parseCommand c ps color = if length c /= 5 then Right "Invalid command"
             else 
-                let moves = ((digitToInt $ (!!) c 0, digitToInt $ (!!) c 1), (digitToInt $ (!!) c 3, digitToInt $ (!!) c 4))
+                let og = (digitToInt $ (!!) c 0, digitToInt $ (!!) c 1)
+                    nx = (digitToInt $ (!!) c 3, digitToInt $ (!!) c 4)
+                    moves = (og, nx)
                 in
-                    if validateMove (ps ! fst moves) (fst moves) (snd moves) ps == False 
-                        then Right "Invalid move"
+                    if ps !? og == Nothing then Right "Piece does not exist"
+                    else if verifyMoveColor og ps color == False then Right "Wrong color"
+                    else if validateMove (ps ! og) og nx ps == False then Right "Invalid move"
                     else Left moves
 
+verifyMoveColor :: (Int, Int) -> Map (Int, Int) Char -> String -> Bool
+verifyMoveColor k ps color
+    | color == "white" = isWhite $ ps ! k
+    | color == "black" = isBlack $ ps ! k
+    | otherwise = False
+
+                    
 movePiece :: Either ((Int, Int), (Int, Int)) String -> Map (Int, Int) Char -> Map (Int, Int) Char
 movePiece c ps = 
     let e = ((0, 0), (0, 0))
@@ -45,4 +58,4 @@ movePiece c ps =
 startGame = do
     putStrLn $ printBoard initPieces
     do
-        playGame initPieces
+        playGame initPieces "white"
