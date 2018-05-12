@@ -4,6 +4,9 @@ import Data.Map as M
 import Prelude as P
 import Control.Lens as L
 
+type Coord = (Int, Int)
+type PieceMap = Map Coord Char
+
 board :: [String]
 board = ["◻◼◻◼◻◼◻◼"
     , "◼◻◼◻◼◻◼◻"
@@ -16,7 +19,7 @@ board = ["◻◼◻◼◻◼◻◼"
     ]
 
 
-initPieces :: Map (Int, Int) Char
+initPieces :: PieceMap
 initPieces = M.fromList [((0, 7), '♜')
     , ((7, 7), '♜')
     , ((0, 0), '♖')
@@ -52,7 +55,7 @@ initPieces = M.fromList [((0, 7), '♜')
     ]
 
 
-createBoard :: [String] -> Map (Int, Int) Char -> [(Int, Int)] -> [String] 
+createBoard :: [String] -> PieceMap -> [Coord] -> [String] 
 createBoard b m ks = P.foldl (\a k -> let
     y = snd k
     x = fst k

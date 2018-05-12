@@ -2,8 +2,9 @@ module PieceBehavior where
 
 import Data.Maybe (fromJust)
 import Data.Map.Lazy
+import Board
 
-validBlackPawn :: (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validBlackPawn :: Coord -> Coord -> PieceMap -> Bool
 validBlackPawn og nx ps = let 
     x = fst nx - fst og
     y = snd nx - snd og
@@ -13,7 +14,7 @@ validBlackPawn og nx ps = let
         x == 1 || x == -1
     ) && oppositeColorPieceExists ps nx isWhite))
 
-oppositeColorPieceExists :: Map (Int, Int) Char -> (Int, Int) -> (Char -> Bool) -> Bool
+oppositeColorPieceExists :: PieceMap -> Coord -> (Char -> Bool) -> Bool
 oppositeColorPieceExists ps nx f =
     ps !? nx /= Nothing && (f . fromJust $ ps !? nx)
 
@@ -57,19 +58,19 @@ validKing og nx = let
     y = abs $ (-) (snd og) (snd nx)
     in x < 2 && y < 2 && (x /= 0 || y /= 0)
 
-validateMove :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validateMove :: Char -> Coord -> Coord -> PieceMap -> Bool
 validateMove c og nx ps = 
     validateTakeOver c nx ps
     && validatePieceBehavior c og nx ps
     && (c == '♘' || c == '♞' || False == piecesBetween og (fst nx) (snd nx) ps)
 
 
-validateTakeOver :: Char -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validateTakeOver :: Char -> Coord -> PieceMap -> Bool
 validateTakeOver c nx ps =
     if ps !? nx == Nothing then True
     else (isWhite c) /= (isWhite . fromJust $ ps !? nx)
 
-validatePieceBehavior :: Char -> (Int, Int) -> (Int, Int) -> Map (Int, Int) Char -> Bool
+validatePieceBehavior :: Char -> Coord -> Coord -> PieceMap -> Bool
 validatePieceBehavior c og nx ps
     | c == '♜' || c == '♖' = validRook og nx
     | c == '♞' || c == '♘' = validKnight og nx

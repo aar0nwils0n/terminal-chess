@@ -32,7 +32,7 @@ convertCoord i
     | i < 1 || i > 8 = -1
     | otherwise = [7,6,5,4,3,2,1,0] !! (i - 1)
 
-parseCommand :: String -> Map (Int, Int) Char -> String -> Either ((Int, Int), (Int, Int)) String
+parseCommand :: String -> PieceMap -> String -> Either (Coord, Coord) String
 parseCommand c ps color = if length c /= 5 then Right "Invalid command"
             else 
                 let
@@ -49,14 +49,14 @@ parseCommand c ps color = if length c /= 5 then Right "Invalid command"
                     else if validateMove (ps ! og) og nx ps == False then Right "Invalid move"
                     else Left moves
 
-verifyMoveColor :: (Int, Int) -> Map (Int, Int) Char -> String -> Bool
+verifyMoveColor :: Coord -> PieceMap -> String -> Bool
 verifyMoveColor k ps color
     | color == "white" = isWhite $ ps ! k
     | color == "black" = isBlack $ ps ! k
     | otherwise = False
 
                     
-movePiece :: Either ((Int, Int), (Int, Int)) String -> Map (Int, Int) Char -> Map (Int, Int) Char
+movePiece :: Either (Coord, Coord) String -> PieceMap -> PieceMap
 movePiece c ps = 
     let e = ((0, 0), (0, 0))
     in
