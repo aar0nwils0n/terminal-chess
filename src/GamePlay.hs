@@ -13,18 +13,15 @@ printBoard pieces =
 
 playGame pieces color = do
     putStrLn $ "Move " ++ color ++ " piece"
-    do
-        command <- getLine
-        do
-            let parsed = parseCommand command pieces color
-                newPieces = movePiece parsed pieces
-            putStrLn (if isRight parsed then fromRight "" parsed
-            else printBoard newPieces)
-            do
-                playGame newPieces (
-                        if isRight parsed then color
-                        else if color == "white" then "black" else "white"
-                    )
+    command <- getLine
+    let parsed = parseCommand command pieces color
+        newPieces = movePiece parsed pieces
+    putStrLn (if isRight parsed then fromRight "" parsed
+    else printBoard newPieces)
+    playGame newPieces (
+        if isRight parsed then color
+        else if color == "white" then "black" else "white"
+        )
 
 letterToNumber c = ord c - 97
 
