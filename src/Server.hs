@@ -10,9 +10,10 @@ import qualified Data.Text.IO as TIO
 import GamePlay
 import Board
 import qualified Network.WebSockets as WS
-import qualified Data.Map.Lazy as M
+import qualified Data.Map as M
 import Data.Maybe
-
+import Debug.Trace (trace)
+import Data.List (length)
 type RoomsState = M.Map Text ([Text], PieceMap, Text)
 
 type ClientInfo = (Text, WS.Connection)
@@ -28,74 +29,97 @@ newServerState = let
     roomsState = M.empty
     in (clientMap, roomsState)
 
-addRoom :: Text -> MVar ServerState -> IO ()
-addRoom roomName state =
-    modifyMVar_ state $ \s -> do
-    let clients = fst s
-        rooms = M.insert roomName ([], initPieces, "white") $ snd s
-        s = (clients, rooms)
-        in return (clients, rooms)
+addRoom :: Text -> ServerState -> ServerState
+addRoom roomName s =
+    let (clients, rooms) = s
+        rooms' = M.insert roomName ([], initPieces, "white") rooms
+        in (clients, rooms')
 
 removeClient :: Text -> MVar ServerState -> IO ()
 removeClient uuid state =
     modifyMVar_ state $ \s -> do
-    let (clients, rooms) = s
-        clients' = M.delete uuid clients
-        s' = (clients', rooms)
-        in return (clients', rooms)
+        let (clients, rooms) = s
+            clients' = M.delete uuid clients
+            s' = (clients', rooms)
+            in return (clients', rooms)
 
 
-addClient :: ClientInfo -> Text ->  MVar ServerState -> IO ()
-addClient info guid state =
-    modifyMVar_ state $ \s -> do
+addClient :: ClientInfo -> Text ->  ServerState -> ServerState
+addClient info guid s =
     let (clients, rooms) = s
         clients' = M.insert guid info clients
-        in return (clients, rooms)
+        in (clients', rooms)
 
 
-addClientToRoom :: Text -> Text -> MVar ServerState -> IO ()
-addClientToRoom uuid roomName state =
-    modifyMVar_ state $ \s -> do
+addClientToRoom :: Text -> Text -> ServerState -> ServerState
+addClientToRoom uuid roomName s =
         let (clients, rooms) = s
-            room = rooms M.! roomName
-            (roomClients, ps, color) = room
-            roomClients' = roomClients ++ [uuid]
-            rooms' = M.insert roomName (roomClients', ps, color) $ M.delete roomName rooms
-            client = clients M.! uuid
-            client' = (roomName, snd client)
-            clients' = M.insert uuid client' $ M.delete uuid clients
-            in return (clients', rooms')
+            room = rooms M.!? roomName
+            newState = case room of 
+                Just room -> 
+                    let
+                        (roomClients, ps, color) = room
+                        roomClients' = roomClients ++ [uuid]
+                        rooms' = M.insert roomName (roomClients', ps, color) $ M.delete roomName rooms
+                        client = clients M.!? uuid
+                        clients' = case client of
+                          Just client -> M.insert uuid (roomName, snd client) $ M.delete uuid clients
+                          Nothing -> clients
+                        in 
+                            (clients', rooms')
+                Nothing -> 
+                    s
+            in newState
     
-updateBoard :: Text -> Text -> MVar ServerState -> IO ()
-updateBoard cmd roomName state = 
-    modifyMVar_ state $ \s -> do
+updateBoard :: Text -> Text -> ServerState -> ServerState
+updateBoard cmd roomName s = 
         let (clients, rooms) = s
-            room = rooms M.! roomName
-            (roomClients, pieces, color) = room
-            parsed = parseCommand (T.unpack cmd) pieces (T.unpack color)
-            newPieces = movePiece parsed pieces
-            color' = if color == "white" then "black" else "white"
-            rooms' = M.insert roomName (roomClients, newPieces, color') $ M.delete roomName rooms
-            in return (clients, rooms')
+            mayRoom = rooms M.!? roomName
+            state' = case mayRoom of 
+                Just room ->
+                    let (roomClients, pieces, color) = room
+                        parsed = parseCommand (T.unpack cmd) pieces (T.unpack color)
+                        newPieces = movePiece parsed pieces
+                        color' = if color == "white" then "black" else "white"
+                        rooms' = M.insert roomName (roomClients, newPieces, color') $ M.delete roomName rooms
+                    in (clients, rooms')
+                Nothing -> 
+                    (clients, rooms)
+            in state'
 
 
 
 broadcast :: Text -> [WS.Connection] -> IO ()
 broadcast message clients = do
-    TIO.putStrLn message
+    TIO.putStrLn "broadcasting"
     forM_ clients $ \conn -> WS.sendTextData conn message
+    putStrLn "broadcasted"
 
-main :: IO ()
-main = do
-    state <- newMVar newServerState
-    WS.runServer "127.0.0.1" 9160 $ application state
+roomExists :: ServerState -> Text -> Bool
+roomExists state roomName = 
+    let (_, rooms) = state
+        mayRoom = rooms M.!? roomName
+    in case mayRoom of
+        Just _ -> True
+        Nothing -> False
+
+
 
 getPieces :: Text -> ServerState -> PieceMap
 getPieces roomName state = 
     let (_, rooms) = state
-        room = rooms M.! roomName
-        (_, ps, _) = room
-        in ps
+        room = rooms M.!? roomName
+        in case room of 
+            Just room -> 
+                let (_, ps, _) = room
+                in ps
+            Nothing ->
+                initPieces
+
+updateState :: MVar ServerState -> ServerState -> IO ()
+updateState state newState = 
+    modifyMVar_ state $ \s -> do
+        return newState
 
 
 application :: MVar ServerState -> WS.ServerApp
@@ -104,44 +128,52 @@ application state pending = do
     WS.forkPingThread conn 30
     msg <- WS.receiveData conn 
     state' <- readMVar state
+    putStrLn "in app"
+  
     case (msg :: Text) of
-        _   | cmd == "start game" ->
-                do
-                    addRoom (T.drop 11 cmd) state
-                    addClientToRoom uuid (T.drop 11 cmd) state
-                    WS.sendTextData conn ("Created Room:" :: Text)
-                    talk conn state roomName
-            | cmd == "join game" ->
-                do
-                    addClientToRoom uuid (T.drop 12 cmd) state
-                    WS.sendTextData conn ("Joined Room" :: Text)
-                    talk conn state roomName
-
-            | otherwise ->
+        _   | T.take 10 cmd == "start game" ->
                 flip finally disconnect $ do
-                    addClient ("", conn) uuid state
-                    WS.sendTextData conn $ ("Welcome" :: Text)
+                    let roomName = T.drop 11 cmd
+                        stateWithRoom = addRoom roomName state'
+                        stateWithClient = addClientToRoom uuid roomName $ addClient (roomName, conn) uuid stateWithRoom
+                    updateState state stateWithClient
+                    WS.sendTextData conn (T.concat [("Created Room: " :: Text), roomName])
+                    talk conn state roomName
+            | T.take 9 cmd == "join game" ->
+                flip finally disconnect $ do
+                    let roomName = T.drop 9 cmd
+                    if roomExists state' roomName then
+                        do
+                            let stateWithAddedClient = addClient (roomName, conn) uuid $ addClientToRoom uuid roomName state'
+                            updateState state stateWithAddedClient
+                            WS.sendTextData conn (T.concat [("Joined Room: " :: Text), roomName])
+                            talk conn state roomName
+                        else
+                            WS.sendTextData conn ("Room does not exist" :: Text)
+ 
             where
                 uuid = T.take 36 msg
                 cmd = T.drop 36 msg
-                (clients, _) = state'
-                (roomName, _) = fromJust $ M.lookup uuid clients
                 disconnect = do
+                    putStrLn "disconnecting"
                     removeClient uuid state
 
 
 talk :: WS.Connection -> MVar ServerState -> Text -> IO ()
 talk conn state roomName = forever $ do
     msg <- WS.receiveData conn
+    TIO.putStrLn msg
     s <- readMVar state
     let cmd = T.drop 36 msg
-    updateBoard cmd roomName state
-    state'' <- readMVar state
-    let ps = getPieces roomName state'' 
+        state' = updateBoard cmd roomName s
+    let ps = getPieces roomName state'
         boardText = T.pack (printBoard ps)
-    WS.sendTextData conn boardText
+        (_, rooms) = state'
+    putStrLn "board: "
+    putStrLn . show . Prelude.length $ M.elems rooms
+    putStrLn $ printBoard ps
+    updateState state state'
     let (clients, _) = s
         filtered = filter (\x -> fst x == roomName ) (M.elems clients)
         conns = fmap (\x -> snd x) filtered
-        in
-        broadcast msg conns
+    broadcast boardText conns
