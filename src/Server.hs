@@ -14,6 +14,8 @@ import qualified Data.Map as M
 import Data.Maybe
 import Debug.Trace (trace)
 import Data.List (length)
+import Data.Either (isRight)
+
 type RoomsState = M.Map Text ([Text], PieceMap, Text)
 
 type ClientInfo = (Text, WS.Connection)
@@ -39,9 +41,13 @@ removeClient :: Text -> MVar ServerState -> IO ()
 removeClient uuid state =
     modifyMVar_ state $ \s -> do
         let (clients, rooms) = s
+            client = clients M.!? uuid
             clients' = M.delete uuid clients
             s' = (clients', rooms)
-            in return (clients', rooms)
+            rooms' = if (length $ M.elems clients') == 0 && (not $ isNothing client) then
+                M.delete (fst $ fromJust client) rooms
+                else rooms
+            in return (clients', rooms')
 
 
 addClient :: ClientInfo -> Text ->  ServerState -> ServerState
@@ -70,6 +76,21 @@ addClientToRoom uuid roomName s =
                 Nothing -> 
                     s
             in newState
+
+validCommand :: Text -> Text -> ServerState -> Bool
+validCommand cmd roomName s = 
+    let
+        (_, rooms) = s
+        mayRoom = rooms M.!? roomName
+        in case mayRoom of
+            Just room ->
+                let (_, pieces, color) = room
+                    parsed = parseCommand (T.unpack cmd) pieces (T.unpack color)
+                in case parsed of
+                    Left _ -> True
+                    Right _ -> False
+            Nothing -> False
+    
     
 updateBoard :: Text -> Text -> ServerState -> ServerState
 updateBoard cmd roomName s = 
@@ -83,7 +104,7 @@ updateBoard cmd roomName s =
                         color' = if color == "white" then "black" else "white"
                         rooms' = M.insert roomName (roomClients, newPieces, color') $ M.delete roomName rooms
                     in (clients, rooms')
-                Nothing -> 
+                Nothing ->
                     (clients, rooms)
             in state'
 
@@ -91,9 +112,7 @@ updateBoard cmd roomName s =
 
 broadcast :: Text -> [WS.Connection] -> IO ()
 broadcast message clients = do
-    TIO.putStrLn "broadcasting"
     forM_ clients $ \conn -> WS.sendTextData conn message
-    putStrLn "broadcasted"
 
 roomExists :: ServerState -> Text -> Bool
 roomExists state roomName = 
@@ -102,6 +121,14 @@ roomExists state roomName =
     in case mayRoom of
         Just _ -> True
         Nothing -> False
+
+clientCount :: ServerState -> Text -> Int
+clientCount state roomName = 
+    let (_, rooms) = state
+        mayRoom = rooms M.!? roomName
+    in case mayRoom of
+        Just (clients, _, _) -> length clients
+        Nothing -> 0
 
 
 
@@ -132,25 +159,33 @@ application state pending = do
   
     case (msg :: Text) of
         _   | T.take 10 cmd == "start game" ->
-                flip finally disconnect $ do
-                    let roomName = T.drop 11 cmd
-                        stateWithRoom = addRoom roomName state'
-                        stateWithClient = addClientToRoom uuid roomName $ addClient (roomName, conn) uuid stateWithRoom
-                    updateState state stateWithClient
-                    WS.sendTextData conn (T.concat [("Created Room: " :: Text), roomName])
-                    talk conn state roomName
-            | T.take 9 cmd == "join game" ->
-                flip finally disconnect $ do
-                    let roomName = T.drop 9 cmd
-                    if roomExists state' roomName then
-                        do
-                            let stateWithAddedClient = addClient (roomName, conn) uuid $ addClientToRoom uuid roomName state'
-                            updateState state stateWithAddedClient
-                            WS.sendTextData conn (T.concat [("Joined Room: " :: Text), roomName])
+                let roomName = T.drop 11 cmd in
+                if roomExists state' roomName then
+                    WS.sendTextData conn ("Room already exists" :: Text)
+                    else
+                        flip finally disconnect $ do
+                            let stateWithRoom = addRoom roomName state'
+                                stateWithClient = addClientToRoom uuid roomName $ addClient (roomName, conn) uuid stateWithRoom
+                            updateState state stateWithClient
+                            WS.sendTextData conn (T.concat [("Created Room: " :: Text), roomName])
                             talk conn state roomName
-                        else
-                            WS.sendTextData conn ("Room does not exist" :: Text)
- 
+            | T.take 9 cmd == "join game" ->
+                let roomName = T.drop 9 cmd in
+                case (roomName) of
+                    _ | clientCount state' roomName == 2 ->
+                        do
+                            WS.sendTextData conn ("Already two players in room" :: Text)
+                    _ | roomExists state' roomName ->
+                        flip finally disconnect $ do
+                                do
+                                    let stateWithAddedClient = addClient (roomName, conn) uuid $ addClientToRoom uuid roomName state'
+                                    updateState state stateWithAddedClient
+                                    WS.sendTextData conn (T.concat [("Joined Room: " :: Text), roomName])
+                                    talk conn state roomName
+                    | otherwise ->
+                            do
+                                WS.sendTextData conn ("Room does not exist" :: Text)
+
             where
                 uuid = T.take 36 msg
                 cmd = T.drop 36 msg
@@ -162,18 +197,16 @@ application state pending = do
 talk :: WS.Connection -> MVar ServerState -> Text -> IO ()
 talk conn state roomName = forever $ do
     msg <- WS.receiveData conn
-    TIO.putStrLn msg
     s <- readMVar state
     let cmd = T.drop 36 msg
+        valid = validCommand cmd roomName s
         state' = updateBoard cmd roomName s
-    let ps = getPieces roomName state'
-        boardText = T.pack (printBoard ps)
-        (_, rooms) = state'
-    putStrLn "board: "
-    putStrLn . show . Prelude.length $ M.elems rooms
-    putStrLn $ printBoard ps
+        newMessage = if valid then 
+            let ps = getPieces roomName state'
+            in T.pack (printBoard ps)
+            else ("Invalid move" :: Text)
     updateState state state'
     let (clients, _) = s
         filtered = filter (\x -> fst x == roomName ) (M.elems clients)
         conns = fmap (\x -> snd x) filtered
-    broadcast boardText conns
+    broadcast newMessage conns
