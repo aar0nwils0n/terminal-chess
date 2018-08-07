@@ -1,4 +1,4 @@
-module Board where
+module AaronChess.Board where
 
 import Data.Map as M
 import Prelude as P

@@ -1,4 +1,4 @@
-module PieceBehavior where
+module AaronChess.PieceBehavior where
 
 import Data.Maybe (fromJust)
 import Data.Map.Lazy

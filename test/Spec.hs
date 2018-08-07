@@ -1,10 +1,10 @@
 import Test.Hspec
 import Test.QuickCheck
 import Control.Exception (evaluate)
-import PieceBehavior 
+import AaronChess.PieceBehavior 
 import Data.Map (fromList)
-import Board
-import GamePlay
+import AaronChess.Board
+import AaronChess.GamePlay
 
 main :: IO ()
 main = hspec $ do

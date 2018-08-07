@@ -1,6 +1,6 @@
 module Main where
 
-import GamePlay (startGame)
+import AaronChess.GamePlay (startGame)
 
 main :: IO ()
 main = startGame

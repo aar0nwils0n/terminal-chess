@@ -1,10 +1,10 @@
-module GamePlay where
+module AaronChess.GamePlay where
 
-import Board
+import AaronChess.Board
 import Data.Map.Lazy
 import Data.Char (digitToInt, ord)
 import Data.Either (isRight, fromLeft, fromRight)
-import PieceBehavior (validateMove, isWhite, isBlack)
+import AaronChess.PieceBehavior (validateMove, isWhite, isBlack)
 import Prelude as P 
 
 printBoard pieces = 
